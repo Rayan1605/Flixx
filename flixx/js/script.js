@@ -10,7 +10,14 @@
 // A router in JavaScript is like a map or guide that helps you move between these levels.
 
 const global = {
-    currentPage: window.location.pathname//to check which page we are on
+    currentPage: window.location.pathname , //to check which page we are on
+    search: {
+        term :'',
+        type: '',
+        page:1,
+        totalPages:1
+
+    }
 }
 async function DisplayPopularTvshows() {
     const {results} = await getApiData('tv/popular');
@@ -179,6 +186,90 @@ async  function DisplayMoviesDetails(){
     document.querySelector('#movie-details').appendChild(div);
 
 }
+//Making request
+async function searchApidata() {
+    const API_KEY = '8be4fed3f9278cd77673ccca099bcc62'  // just know don't do this so people can't get your api key
+    //next make  a server to hide your api key
+    const API_URL = `https://api.themoviedb.org/3/`
+
+    showSpinner();
+
+    const response = await fetch(
+        `${API_URL}search/${global.search.type}?api_key=${API_KEY}&language=en-US&query=${global.search.term}&page=1&include_adult=false`);
+const data = await response.json();
+hideSpinner();
+return data;
+
+}
+
+function displaySearchResults(results,type) {
+    results.forEach((result) => {
+        const div = document.createElement('div');
+        div.classList.add('card');
+        div.innerHTML = `
+          <a href="${global.search.type}-details.html?id=${result.id}">
+            ${
+            result.poster_path
+                ? `<img
+              src="https://image.tmdb.org/t/p/w500/${result.poster_path}"
+              class="card-img-top"
+              alt="${
+                    type=== 'movie' ? result.title : result.name
+                }"
+            />`
+                : `<img
+            src="../images/no-image.jpg"
+            class="card-img-top"
+             alt="${
+                    type === 'movie' ? result.title : result.name
+                }"
+          />`
+        }
+          </a>
+          <div class="card-body">
+            <h5 class="card-title">${
+           type === 'movie' ? result.title : result.name
+        }</h5>
+            <p class="card-text">
+              <small class="text-muted">Release: ${
+            type === 'movie'
+                ? result.release_date
+                : result.first_air_date
+        }</small>
+            </p>
+          </div>
+        `;
+
+        document.querySelector('#search-results').appendChild(div);
+    });
+}
+async function search() {
+    const queryString = window.location.search; //this is going to get the query string
+    //the query string is the ? and everything after it in the url
+    const urlParams = new URLSearchParams(queryString).get("type");
+    global.search.type = urlParams.get('type');
+    global.search.term = urlParams.get('search-term');
+
+    if (global.search.term !== "" || global.search.term !== null) {
+        const {results, total_pages, page} = await searchApidata();
+        if (results.length === 0) showAlert('No results found', 'error');
+        displaySearchResults(results);
+   document.querySelector("#search-term").value = "";
+    }
+    else {
+showAlert('Please enter a search term', 'error');
+
+    }
+}
+//show custom Alert
+function showAlert(message, className) {
+    const div = document.createElement('div');
+    div.classList.add('alert', className);
+    div.appendChild(document.createTextNode(message)); // so we are adding the message to the div
+    document.querySelector('#alert').appendChild(div); // so we are adding the div to the alert
+
+    setTimeout(() => div.remove(),3000); // so we are removing the div after 3 seconds
+}
 
 function initSwiper() {
     const swiper = new Swiper('.swiper', {
@@ -336,7 +427,7 @@ function init(){
                     DisplayTvDetails();
                     break;
                     case '/search.html':
-                        console.log("Movies Page");
+                        search();
                         break;
 
     }
